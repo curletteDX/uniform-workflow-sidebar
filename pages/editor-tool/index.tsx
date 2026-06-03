@@ -1,5 +1,6 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { useMeshLocation } from '@uniformdev/mesh-sdk-react';
 import { WorkflowTimeline, WorkflowStage } from '../../components/WorkflowTimeline';
 
 interface WorkflowStageDefinition {
@@ -13,7 +14,7 @@ interface WorkflowDefinition {
   stages: WorkflowStageDefinition[];
 }
 
-// Demo workflow for development/preview
+// Demo workflow shown when not in Uniform context or no workflow assigned
 const DEMO_WORKFLOW: WorkflowDefinition = {
   id: 'demo',
   name: 'Content Review',
@@ -25,35 +26,42 @@ const DEMO_WORKFLOW: WorkflowDefinition = {
 };
 
 function EditorToolContent() {
+  // Get location value and metadata from Uniform via MESH SDK
+  const { value, metadata } = useMeshLocation('canvasEditorTools');
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [workflowDef, setWorkflowDef] = useState<WorkflowDefinition>(DEMO_WORKFLOW);
-  const [currentStageId, setCurrentStageId] = useState<string>('review');
-  const [meshLocation, setMeshLocation] = useState<any>(null);
+  const [demoStageId, setDemoStageId] = useState<string>('review');
 
-  // Initialize MESH SDK when in Uniform iframe
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  // Extract workflow info from the location value
+  // Value contains the composition/entry being edited
+  const entityData = (value as any)?.composition || (value as any)?.entry;
+  const workflowStage = entityData?._workflowStage;
+  const workflowId = workflowStage?.workflowId;
+  const currentStageId = workflowStage?.stageId || demoStageId;
 
-    // Check if we're in an iframe (Uniform context)
-    const isInIframe = window.self !== window.top;
-    
-    if (isInIframe) {
-      // Dynamically import and initialize the MESH SDK
-      import('@uniformdev/mesh-sdk-react').then(async (mod) => {
-        try {
-          // The SDK communicates with the parent Uniform window
-          // For now, we'll rely on message events
-          console.log('MESH SDK loaded in Uniform iframe context');
-        } catch (err) {
-          console.error('Failed to initialize MESH SDK:', err);
-        }
-      });
+  // Get workflow definition from metadata or use demo
+  const workflowDef: WorkflowDefinition = useMemo(() => {
+    // Check if workflow definitions are available in metadata
+    const workflows = (metadata as any)?.workflows;
+    if (workflows && workflowId && workflows[workflowId]) {
+      return workflows[workflowId];
     }
-  }, []);
+    
+    // Check for workflow stages in the workflowStage itself
+    if (workflowStage?.workflowName) {
+      return {
+        id: workflowId || 'unknown',
+        name: workflowStage.workflowName,
+        stages: DEMO_WORKFLOW.stages, // Use demo stages as fallback
+      };
+    }
+    
+    return DEMO_WORKFLOW;
+  }, [metadata, workflowId, workflowStage]);
 
   // Build stages array with current state
-  const stages: WorkflowStage[] = React.useMemo(() => {
+  const stages: WorkflowStage[] = useMemo(() => {
     if (!workflowDef) return [];
 
     const currentIndex = workflowDef.stages.findIndex(
@@ -92,13 +100,15 @@ function EditorToolContent() {
     setError(null);
     
     try {
+      // TODO: Call Uniform API to transition workflow stage
+      // This would use the Canvas API: PUT /api/v1/canvas with workflow transition
       console.log('Transitioning to previous stage:', previousStage.name);
       
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      // Update local state for demo
-      setCurrentStageId(previousStage.id);
+      // For demo mode, update local state
+      if (!workflowId) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setDemoStageId(previousStage.id);
+      }
       
     } catch (err) {
       setError('Failed to transition workflow');
@@ -106,7 +116,7 @@ function EditorToolContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [workflowDef, stages]);
+  }, [workflowDef, stages, workflowId]);
 
   const handleNext = useCallback(async () => {
     if (!workflowDef || !stages.length) return;
@@ -120,13 +130,14 @@ function EditorToolContent() {
     setError(null);
     
     try {
+      // TODO: Call Uniform API to transition workflow stage
       console.log('Transitioning to next stage:', nextStage.name);
       
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      // Update local state for demo
-      setCurrentStageId(nextStage.id);
+      // For demo mode, update local state
+      if (!workflowId) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setDemoStageId(nextStage.id);
+      }
       
     } catch (err) {
       setError('Failed to transition workflow');
@@ -134,7 +145,7 @@ function EditorToolContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [workflowDef, stages]);
+  }, [workflowDef, stages, workflowId]);
 
   return (
     <div style={styles.wrapper}>
@@ -150,7 +161,8 @@ function EditorToolContent() {
   );
 }
 
-// Use dynamic import with SSR disabled to avoid hydration issues
+// Dynamic import with SSR disabled - required because useMeshLocation
+// depends on browser APIs and iframe messaging with Uniform
 const EditorTool = dynamic(() => Promise.resolve(EditorToolContent), {
   ssr: false,
   loading: () => (
