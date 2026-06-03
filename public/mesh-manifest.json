@@ -1,9 +1,6 @@
 {
-  "$schema": "https://uniform.app/schemas/mesh-manifest.json",
   "type": "workflow-sidebar",
   "displayName": "Workflow Sidebar",
-  "description": "Visual workflow timeline with navigation controls for the Canvas editor",
-  "version": "1.0.0",
   "locations": {
     "canvas": {
       "editorTools": {
