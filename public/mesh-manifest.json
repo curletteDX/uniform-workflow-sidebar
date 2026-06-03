@@ -1,28 +1,33 @@
 {
   "type": "workflow-sidebar",
   "displayName": "Workflow Sidebar",
+  "logoIconUrl": "https://uniform-workflow-sidebar.vercel.app/icons/workflow.svg",
+  "badgeIconUrl": "https://uniform-workflow-sidebar.vercel.app/icons/workflow.svg",
+  "category": "content",
+  "baseLocationUrl": "https://uniform-workflow-sidebar.vercel.app",
   "locations": {
+    "install": {
+      "description": [
+        "Visual workflow timeline with navigation controls for the Canvas editor."
+      ]
+    },
     "canvas": {
       "editorTools": {
         "composition": {
           "url": "/editor-tool",
-          "displayName": "Workflow",
-          "iconUrl": "/icons/workflow.svg"
+          "displayName": "Workflow"
         },
         "componentPattern": {
           "url": "/editor-tool",
-          "displayName": "Workflow",
-          "iconUrl": "/icons/workflow.svg"
+          "displayName": "Workflow"
         },
         "entry": {
           "url": "/editor-tool",
-          "displayName": "Workflow",
-          "iconUrl": "/icons/workflow.svg"
+          "displayName": "Workflow"
         },
         "entryPattern": {
           "url": "/editor-tool",
-          "displayName": "Workflow",
-          "iconUrl": "/icons/workflow.svg"
+          "displayName": "Workflow"
         }
       }
     }
