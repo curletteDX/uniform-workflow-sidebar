@@ -1,40 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Uniform Workflow Sidebar
 
-## Getting Started
+A MESH integration that adds a visual workflow timeline to the Uniform Canvas editor sidebar.
 
-First, run the development server:
+## Features
+
+- Visual timeline showing workflow stages
+- Current stage highlighted with purple accent
+- Previous/Next navigation buttons
+- Works with compositions, patterns, and entries
+
+## Installation
+
+### 1. Deploy the Integration
+
+Deploy this Next.js app to Vercel or another hosting provider.
+
+### 2. Register in Uniform
+
+1. Go to your Uniform Team Settings → Custom Integrations
+2. Create a new integration
+3. Paste the contents of `public/mesh-manifest.json`
+4. Update the URLs to point to your deployed app
+
+### 3. Install on Project
+
+1. Go to your Project → Integrations
+2. Find "Workflow Sidebar" and install it
+3. The workflow tool will appear in the Canvas editor side rail
+
+## Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Build for production
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Manifest Configuration
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+The `mesh-manifest.json` configures which editor contexts show the workflow tool:
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- `composition` - Composition editor
+- `componentPattern` - Component pattern editor  
+- `entry` - Entry editor
+- `entryPattern` - Entry pattern editor
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## Customization
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Workflow Stages
 
-## Learn More
+The component automatically detects the workflow assigned to the composition/entry. If no workflow is assigned, it shows a demo workflow.
 
-To learn more about Next.js, take a look at the following resources:
+### Colors
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+Edit the `colors` object in `components/WorkflowTimeline.tsx` to match your brand:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```typescript
+const colors = {
+  purple: '#6366F1',  // Accent color
+  // ...
+};
+```
 
-## Deploy on Vercel
+## Architecture
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+┌─────────────────────────────────────────┐
+│              Uniform Dashboard           │
+│  ┌───────────────────────────────────┐  │
+│  │         Canvas Editor             │  │
+│  │  ┌─────────┐  ┌────────────────┐  │  │
+│  │  │ Side    │  │    Editor      │  │  │
+│  │  │ Rail    │  │    Content     │  │  │
+│  │  │         │  │                │  │  │
+│  │  │ [Workflow│ │                │  │  │
+│  │  │  Tool]  │  │                │  │  │
+│  │  │   ↓     │  │                │  │  │
+│  │  │ iframe  │  │                │  │  │
+│  │  └─────────┘  └────────────────┘  │  │
+│  └───────────────────────────────────┘  │
+└─────────────────────────────────────────┘
+         │
+         ▼ (iframe loads)
+┌─────────────────────────────────────────┐
+│     This Integration (Next.js App)      │
+│                                         │
+│   /editor-tool                          │
+│   ├── UniformMeshSdkContextProvider     │
+│   │   └── EditorToolContent             │
+│   │       └── WorkflowTimeline          │
+│   │           ├── Header                │
+│   │           ├── Timeline Stages       │
+│   │           └── Footer Buttons        │
+└─────────────────────────────────────────┘
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+## License
+
+MIT
