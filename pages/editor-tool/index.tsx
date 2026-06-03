@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { useMeshLocation } from '@uniformdev/mesh-sdk-react';
+import { MeshApp, useMeshLocation } from '@uniformdev/mesh-sdk-react';
 import { WorkflowTimeline, WorkflowStage } from '../../components/WorkflowTimeline';
 
 interface WorkflowStageDefinition {
@@ -101,7 +101,6 @@ function EditorToolContent() {
     
     try {
       // TODO: Call Uniform API to transition workflow stage
-      // This would use the Canvas API: PUT /api/v1/canvas with workflow transition
       console.log('Transitioning to previous stage:', previousStage.name);
       
       // For demo mode, update local state
@@ -161,15 +160,38 @@ function EditorToolContent() {
   );
 }
 
-// Dynamic import with SSR disabled - required because useMeshLocation
-// depends on browser APIs and iframe messaging with Uniform
-const EditorTool = dynamic(() => Promise.resolve(EditorToolContent), {
-  ssr: false,
-  loading: () => (
+// Loading component for MeshApp
+function LoadingState() {
+  return (
     <div style={styles.loading}>
       <span>Loading workflow...</span>
     </div>
-  ),
+  );
+}
+
+// Error component for MeshApp
+function ErrorState({ error }: { error: Error }) {
+  return (
+    <div style={styles.errorState}>
+      <span>Error loading: {error.message}</span>
+    </div>
+  );
+}
+
+// Wrap with MeshApp which provides the required context
+function EditorToolWithMeshApp() {
+  return (
+    <MeshApp loadingComponent={LoadingState} errorComponent={ErrorState}>
+      <EditorToolContent />
+    </MeshApp>
+  );
+}
+
+// Dynamic import with SSR disabled - required because MeshApp
+// depends on browser APIs and iframe messaging with Uniform
+const EditorTool = dynamic(() => Promise.resolve(EditorToolWithMeshApp), {
+  ssr: false,
+  loading: () => <LoadingState />,
 });
 
 export default function EditorToolPage() {
@@ -201,5 +223,14 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#DC2626',
     borderRadius: '8px',
     fontSize: '13px',
+  },
+  errorState: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    color: '#DC2626',
+    fontSize: '14px',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
 };
