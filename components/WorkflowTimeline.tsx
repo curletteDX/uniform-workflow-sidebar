@@ -33,47 +33,28 @@ export function WorkflowTimeline({
         <h2 style={styles.title}>{workflowName}</h2>
       </div>
 
-      {/* Timeline */}
+      {/* Timeline with alternating snake path */}
       <div style={styles.timeline}>
-        {stages.map((stage, index) => (
-          <div key={stage.id} style={styles.stageContainer}>
-            {/* Node and connecting line */}
-            <div style={styles.nodeColumn}>
-              <div
-                style={{
-                  ...styles.node,
-                  ...(stage.state === 'completed' && styles.nodeCompleted),
-                  ...(stage.state === 'current' && styles.nodeCurrent),
-                  ...(stage.state === 'pending' && styles.nodePending),
-                }}
-              />
-              {index < stages.length - 1 && <div style={styles.line} />}
-            </div>
-
-            {/* Label */}
-            <div style={styles.labelColumn}>
-              <span
-                style={{
-                  ...styles.stageName,
-                  ...(stage.state === 'current' && styles.stageNameCurrent),
-                  ...(stage.state === 'pending' && styles.stageNamePending),
-                }}
-              >
-                {stage.name}
-              </span>
-              <span
-                style={{
-                  ...styles.stageStatus,
-                  ...(stage.state === 'current' && styles.stageStatusCurrent),
-                }}
-              >
-                {stage.state === 'completed' && 'Completed'}
-                {stage.state === 'current' && 'Current'}
-                {stage.state === 'pending' && 'Pending'}
-              </span>
-            </div>
-          </div>
-        ))}
+        <svg
+          width="100%"
+          height={stages.length * 100 + 20}
+          style={styles.svg}
+        >
+          {/* Draw the winding path */}
+          <SnakePath stages={stages} />
+        </svg>
+        
+        {/* Stage nodes and labels */}
+        <div style={styles.stagesOverlay}>
+          {stages.map((stage, index) => (
+            <StageNode
+              key={stage.id}
+              stage={stage}
+              index={index}
+              total={stages.length}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Footer with actions */}
@@ -100,6 +81,111 @@ export function WorkflowTimeline({
         </button>
       </div>
     </div>
+  );
+}
+
+interface StageNodeProps {
+  stage: WorkflowStage;
+  index: number;
+  total: number;
+}
+
+function StageNode({ stage, index, total }: StageNodeProps) {
+  const isLeft = index % 2 === 1;
+  const nodeSize = stage.state === 'current' ? 48 : 40;
+  const topOffset = index * 100 + 10;
+  
+  return (
+    <div
+      style={{
+        ...styles.stageContainer,
+        top: topOffset,
+        flexDirection: isLeft ? 'row' : 'row-reverse',
+      }}
+    >
+      {/* Node */}
+      <div
+        style={{
+          ...styles.node,
+          width: nodeSize,
+          height: nodeSize,
+          ...(stage.state === 'completed' && styles.nodeCompleted),
+          ...(stage.state === 'current' && styles.nodeCurrent),
+          ...(stage.state === 'pending' && styles.nodePending),
+        }}
+      />
+      
+      {/* Label */}
+      <div
+        style={{
+          ...styles.labelContainer,
+          textAlign: isLeft ? 'right' : 'left',
+          [isLeft ? 'marginRight' : 'marginLeft']: 16,
+        }}
+      >
+        <span
+          style={{
+            ...styles.stageName,
+            ...(stage.state === 'current' && styles.stageNameCurrent),
+            ...(stage.state === 'pending' && styles.stageNamePending),
+          }}
+        >
+          {stage.name}
+        </span>
+        <span
+          style={{
+            ...styles.stageStatus,
+            ...(stage.state === 'current' && styles.stageStatusCurrent),
+          }}
+        >
+          {stage.state === 'completed' && 'Completed'}
+          {stage.state === 'current' && 'Current'}
+          {stage.state === 'pending' && 'Pending'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+interface SnakePathProps {
+  stages: WorkflowStage[];
+}
+
+function SnakePath({ stages }: SnakePathProps) {
+  if (stages.length < 2) return null;
+
+  const width = 280;
+  const centerX = width / 2;
+  const nodeOffset = 60;
+  
+  let pathD = '';
+  
+  stages.forEach((stage, index) => {
+    const y = index * 100 + 30;
+    const isLeft = index % 2 === 1;
+    const x = isLeft ? centerX - nodeOffset : centerX + nodeOffset;
+    
+    if (index === 0) {
+      pathD += `M ${x} ${y}`;
+    } else {
+      const prevY = (index - 1) * 100 + 30;
+      const prevIsLeft = (index - 1) % 2 === 1;
+      const prevX = prevIsLeft ? centerX - nodeOffset : centerX + nodeOffset;
+      
+      const midY = (prevY + y) / 2;
+      
+      pathD += ` C ${prevX} ${midY}, ${x} ${midY}, ${x} ${y}`;
+    }
+  });
+
+  return (
+    <path
+      d={pathD}
+      fill="none"
+      stroke={colors.gray200}
+      strokeWidth={2}
+      strokeLinecap="round"
+    />
   );
 }
 
@@ -131,7 +217,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     letterSpacing: '0.5px',
     color: colors.gray400,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
   },
   title: {
     fontSize: '18px',
@@ -141,52 +227,50 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timeline: {
     flex: 1,
-    padding: '24px',
+    padding: '24px 32px',
     overflowY: 'auto',
+    position: 'relative' as const,
+  },
+  svg: {
+    position: 'absolute' as const,
+    top: 24,
+    left: 32,
+    right: 32,
+    pointerEvents: 'none' as const,
+  },
+  stagesOverlay: {
+    position: 'relative' as const,
+    width: '100%',
   },
   stageContainer: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
     display: 'flex',
-    alignItems: 'flex-start',
-    marginBottom: '8px',
-  },
-  nodeColumn: {
-    display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    marginRight: '16px',
+    justifyContent: 'center',
   },
   node: {
-    width: '40px',
-    height: '40px',
     borderRadius: '50%',
     flexShrink: 0,
+    transition: 'all 0.15s ease',
   },
   nodeCompleted: {
     backgroundColor: colors.gray200,
   },
   nodeCurrent: {
-    width: '48px',
-    height: '48px',
     backgroundColor: colors.purple,
     boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
   },
   nodePending: {
     backgroundColor: colors.white,
     border: `2px solid ${colors.gray200}`,
+    boxSizing: 'border-box' as const,
   },
-  line: {
-    width: '2px',
-    height: '40px',
-    backgroundColor: colors.gray200,
-    marginTop: '8px',
-    marginBottom: '8px',
-  },
-  labelColumn: {
+  labelContainer: {
     display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    minHeight: '40px',
-    paddingTop: '8px',
+    flexDirection: 'column' as const,
+    minWidth: 80,
   },
   stageName: {
     fontSize: '15px',
