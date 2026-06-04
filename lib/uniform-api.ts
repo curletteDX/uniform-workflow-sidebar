@@ -115,7 +115,7 @@ export async function updateEntryWorkflowStage(
       entry: {
         ...entryData,
         workflowStageId,
-      },
+      } as typeof entryData,
       state: CANVAS_DRAFT_STATE,
       releaseId: metadata.releaseId,
       skipValidation: false,
@@ -170,7 +170,7 @@ export async function updateCompositionWorkflowStage(
       composition: {
         ...composition,
         workflowStageId,
-      },
+      } as typeof composition,
       state: CANVAS_DRAFT_STATE,
       releaseId: metadata.releaseId,
       skipValidation: false,
