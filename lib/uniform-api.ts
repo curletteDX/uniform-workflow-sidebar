@@ -155,8 +155,6 @@ export async function updateCompositionWorkflowStage(
       state: CANVAS_DRAFT_STATE,
       releaseId: metadata.releaseId,
       skipPatternResolution: true,
-      skipParameterResolution: true,
-      skipOverridesResolution: true,
     });
 
     if (!getResponse.composition) {
