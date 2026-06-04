@@ -10,23 +10,21 @@ function EditorToolContent() {
     if (process.env.NODE_ENV === 'development') {
       console.log('=== Workflow Sidebar Debug ===');
       console.log('Project ID:', metadata?.projectId);
-      console.log('API Host:', metadata?.apiHost);
       console.log('Release ID:', metadata?.releaseId);
       console.log('Entity Type:', value?.entityType);
       console.log('Root Entity:', value?.rootEntity);
-      console.log('Workflow ID:', value?.rootEntity?.workflowId);
-      console.log('Workflow Stage ID:', value?.rootEntity?.workflowStageId);
+      console.log('Workflow ID:', (value?.rootEntity as any)?.workflowId);
+      console.log('Workflow Stage ID:', (value?.rootEntity as any)?.workflowStageId);
     }
   }, [value, metadata]);
 
   const entityId = value?.rootEntity?._id;
   const entityType = value?.entityType;
   const projectId = metadata?.projectId;
-  const apiHost = metadata?.apiHost;
   const releaseId = metadata?.releaseId;
   
-  const workflowId = value?.rootEntity?.workflowId;
-  const workflowStageId = value?.rootEntity?.workflowStageId;
+  const workflowId = (value?.rootEntity as any)?.workflowId as string | undefined;
+  const workflowStageId = (value?.rootEntity as any)?.workflowStageId as string | undefined;
 
   const {
     workflow,
@@ -38,7 +36,6 @@ function EditorToolContent() {
     transition,
   } = useWorkflow({
     projectId,
-    apiHost,
     entityId,
     entityType,
     releaseId,

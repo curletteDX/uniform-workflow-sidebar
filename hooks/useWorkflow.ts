@@ -14,7 +14,6 @@ export interface WorkflowEntityData {
 
 export interface UseWorkflowOptions {
   projectId?: string;
-  apiHost?: string;
   entityId?: string;
   entityType?: string;
   releaseId?: string;
@@ -35,7 +34,6 @@ export interface UseWorkflowResult {
 
 export function useWorkflow({
   projectId,
-  apiHost,
   entityId,
   entityType,
   releaseId,
@@ -75,7 +73,7 @@ export function useWorkflow({
       const response = await fetch('/api/workflow/get', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, workflowId, apiHost }),
+        body: JSON.stringify({ projectId, workflowId }),
       });
 
       const data: GetWorkflowResponse = await response.json();
@@ -105,7 +103,7 @@ export function useWorkflow({
         setIsLoading(false);
       }
     }
-  }, [projectId, workflowId, apiHost, currentStageId]);
+  }, [projectId, workflowId, currentStageId]);
 
   useEffect(() => {
     fetchWorkflow();
@@ -170,7 +168,6 @@ export function useWorkflow({
           entityId,
           entityType,
           targetStageId,
-          apiHost,
           releaseId,
         }),
       });
@@ -199,7 +196,7 @@ export function useWorkflow({
         setIsLoading(false);
       }
     }
-  }, [projectId, entityId, entityType, apiHost, releaseId]);
+  }, [projectId, entityId, entityType, releaseId]);
 
   const refresh = useCallback(async () => {
     await fetchWorkflow();
