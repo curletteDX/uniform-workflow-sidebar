@@ -37,7 +37,7 @@ export async function fetchWorkflowDefinition(
       projectId: metadata.projectId,
     });
 
-    const response = await workflowClient.get({ workflowId });
+    const response = await workflowClient.get({ workflowIDs: [workflowId] });
 
     if (!response.workflows || response.workflows.length === 0) {
       return { workflow: null, error: 'Workflow not found' };
