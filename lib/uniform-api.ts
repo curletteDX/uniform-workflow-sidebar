@@ -58,9 +58,9 @@ export async function fetchWorkflowDefinition(
         requiresValidity: stage.requireValidity,
         permissions: stage.permissions,
         transitions: (stage.transitions || []).map(transition => ({
-          id: `${stageId}-to-${transition.targetStageId}`,
+          id: `${stageId}-to-${transition.to}`,
           name: transition.name || 'Transition',
-          targetStageId: transition.targetStageId,
+          targetStageId: transition.to,
           permissions: transition.permissions,
         })),
       })),
