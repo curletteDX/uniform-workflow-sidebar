@@ -39,25 +39,26 @@ export async function fetchWorkflowDefinition(
 
     const response = await workflowClient.get({ workflowIDs: [workflowId] });
 
-    if (!response.workflows || response.workflows.length === 0) {
+    if (!response.results || response.results.length === 0) {
       return { workflow: null, error: 'Workflow not found' };
     }
 
-    const workflowData = response.workflows[0];
+    const workflowData = response.results[0];
+    const initialStageId = workflowData.initialStage;
 
     const workflow: WorkflowDefinition = {
       id: workflowData.id,
       name: workflowData.name,
-      projectId: workflowData.projectId,
-      stages: (workflowData.stages || []).map(stage => ({
-        id: stage.id,
+      projectId: metadata.projectId,
+      stages: Object.entries(workflowData.stages || {}).map(([stageId, stage]) => ({
+        id: stageId,
         name: stage.name,
-        isInitial: stage.isInitial,
+        isInitial: stageId === initialStageId,
         autoPublish: stage.autoPublish,
-        requiresValidity: stage.requiresValidity,
+        requiresValidity: stage.requireValidity,
         permissions: stage.permissions,
         transitions: (stage.transitions || []).map(transition => ({
-          id: transition.id || `${stage.id}-to-${transition.targetStageId}`,
+          id: `${stageId}-to-${transition.targetStageId}`,
           name: transition.name || 'Transition',
           targetStageId: transition.targetStageId,
           permissions: transition.permissions,
