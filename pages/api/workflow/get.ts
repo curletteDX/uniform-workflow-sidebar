@@ -3,6 +3,7 @@ import { fetchWorkflowDefinition } from '../../../lib/uniform-api';
 import type { WorkflowDefinition } from '../../../types/workflow';
 
 const UNIFORM_API_KEY = process.env.UNIFORM_API_KEY || '';
+const UNIFORM_API_HOST = process.env.UNIFORM_API_HOST || 'https://uniform.app';
 
 export interface GetWorkflowRequest {
   projectId: string;
@@ -35,7 +36,7 @@ export default async function handler(
 
   const result = await fetchWorkflowDefinition(
     UNIFORM_API_KEY,
-    { projectId, apiHost },
+    { projectId, apiHost: apiHost || UNIFORM_API_HOST },
     workflowId
   );
 

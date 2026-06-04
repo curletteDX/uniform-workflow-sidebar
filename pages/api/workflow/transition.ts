@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { updateEntryWorkflowStage, updateCompositionWorkflowStage } from '../../../lib/uniform-api';
 
 const UNIFORM_API_KEY = process.env.UNIFORM_API_KEY || '';
+const UNIFORM_API_HOST = process.env.UNIFORM_API_HOST || 'https://uniform.app';
 
 export interface TransitionWorkflowRequest {
   projectId: string;
@@ -45,7 +46,7 @@ export default async function handler(
     });
   }
 
-  const metadata = { projectId, apiHost, releaseId };
+  const metadata = { projectId, apiHost: apiHost || UNIFORM_API_HOST, releaseId };
 
   let result;
   if (entityType === 'composition' || entityType === 'componentPattern') {

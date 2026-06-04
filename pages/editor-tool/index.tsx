@@ -7,14 +7,23 @@ function EditorToolContent() {
   const { value, metadata } = useMeshLocation<'canvasEditorTools'>();
   
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('=== Workflow Sidebar Debug ===');
-      console.log('Project ID:', metadata?.projectId);
-      console.log('Release ID:', metadata?.releaseId);
-      console.log('Entity Type:', value?.entityType);
-      console.log('Root Entity:', value?.rootEntity);
-      console.log('Workflow ID:', (value?.rootEntity as any)?.workflowId);
-      console.log('Workflow Stage ID:', (value?.rootEntity as any)?.workflowStageId);
+    console.log('=== Workflow Sidebar Debug ===');
+    console.log('Project ID:', metadata?.projectId);
+    console.log('Release ID:', metadata?.releaseId);
+    console.log('Entity Type:', value?.entityType);
+    console.log('Root Entity keys:', value?.rootEntity ? Object.keys(value.rootEntity) : 'null');
+    console.log('Root Entity:', value?.rootEntity);
+    
+    const entity = value?.rootEntity as any;
+    if (entity) {
+      console.log('workflowId:', entity.workflowId);
+      console.log('workflowStageId:', entity.workflowStageId);
+      console.log('_workflowStage:', entity._workflowStage);
+      const underscoreProps = Object.keys(entity).filter(k => k.startsWith('_') || k.toLowerCase().includes('workflow'));
+      console.log('Workflow-related props:', underscoreProps);
+      underscoreProps.forEach(prop => {
+        console.log(`  ${prop}:`, entity[prop]);
+      });
     }
   }, [value, metadata]);
 
@@ -23,8 +32,9 @@ function EditorToolContent() {
   const projectId = metadata?.projectId;
   const releaseId = metadata?.releaseId;
   
-  const workflowId = (value?.rootEntity as any)?.workflowId as string | undefined;
-  const workflowStageId = (value?.rootEntity as any)?.workflowStageId as string | undefined;
+  const entity = value?.rootEntity as any;
+  const workflowId = entity?.workflowId || entity?._workflowStage?.workflowId;
+  const workflowStageId = entity?.workflowStageId || entity?._workflowStage?.stageId;
 
   const {
     workflow,
