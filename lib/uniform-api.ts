@@ -118,7 +118,6 @@ export async function updateEntryWorkflowStage(
       } as typeof entryData,
       state: CANVAS_DRAFT_STATE,
       releaseId: metadata.releaseId,
-      skipValidation: false,
     });
 
     return { success: true, newStageId: workflowStageId };
@@ -173,7 +172,6 @@ export async function updateCompositionWorkflowStage(
       } as typeof composition,
       state: CANVAS_DRAFT_STATE,
       releaseId: metadata.releaseId,
-      skipValidation: false,
     });
 
     return { success: true, newStageId: workflowStageId };
