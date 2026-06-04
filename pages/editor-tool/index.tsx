@@ -1,201 +1,116 @@
-import React, { useCallback, useState, useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import { MeshApp, useMeshLocation } from '@uniformdev/mesh-sdk-react';
-import { WorkflowTimeline, WorkflowStage } from '../../components/WorkflowTimeline';
-
-interface WorkflowStageDefinition {
-  id: string;
-  name: string;
-}
-
-interface WorkflowDefinition {
-  id: string;
-  name: string;
-  stages: WorkflowStageDefinition[];
-}
-
-// Demo workflow shown when not in Uniform context or no workflow assigned
-const DEMO_WORKFLOW: WorkflowDefinition = {
-  id: 'demo',
-  name: 'Content Review',
-  stages: [
-    { id: 'editing', name: 'Editing' },
-    { id: 'review', name: 'Review' },
-    { id: 'published', name: 'Published' },
-  ],
-};
+import React, { useMemo, useEffect, useCallback } from 'react';
+import { useMeshLocation } from '@uniformdev/mesh-sdk-react';
+import { WorkflowTimeline } from '../../components/WorkflowTimeline';
+import { useWorkflow } from '../../hooks/useWorkflow';
 
 function EditorToolContent() {
-  // Get location value and metadata from Uniform via MESH SDK
-  const { value, metadata } = useMeshLocation('canvasEditorTools');
+  const { value, metadata } = useMeshLocation<'canvasEditorTools'>();
   
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [demoStageId, setDemoStageId] = useState<string>('review');
-
-  // Extract workflow info from the location value
-  // Value contains the composition/entry being edited
-  const entityData = (value as any)?.composition || (value as any)?.entry;
-  const workflowStage = entityData?._workflowStage;
-  const workflowId = workflowStage?.workflowId;
-  const currentStageId = workflowStage?.stageId || demoStageId;
-
-  // Get workflow definition from metadata or use demo
-  const workflowDef: WorkflowDefinition = useMemo(() => {
-    // Check if workflow definitions are available in metadata
-    const workflows = (metadata as any)?.workflows;
-    if (workflows && workflowId && workflows[workflowId]) {
-      return workflows[workflowId];
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('=== Workflow Sidebar Debug ===');
+      console.log('Project ID:', metadata?.projectId);
+      console.log('API Host:', metadata?.apiHost);
+      console.log('Release ID:', metadata?.releaseId);
+      console.log('Entity Type:', value?.entityType);
+      console.log('Root Entity:', value?.rootEntity);
+      console.log('Workflow ID:', value?.rootEntity?.workflowId);
+      console.log('Workflow Stage ID:', value?.rootEntity?.workflowStageId);
     }
-    
-    // Check for workflow stages in the workflowStage itself
-    if (workflowStage?.workflowName) {
-      return {
-        id: workflowId || 'unknown',
-        name: workflowStage.workflowName,
-        stages: DEMO_WORKFLOW.stages, // Use demo stages as fallback
-      };
+  }, [value, metadata]);
+
+  const entityId = value?.rootEntity?._id;
+  const entityType = value?.entityType;
+  const projectId = metadata?.projectId;
+  const apiHost = metadata?.apiHost;
+  const releaseId = metadata?.releaseId;
+  
+  const workflowId = value?.rootEntity?.workflowId;
+  const workflowStageId = value?.rootEntity?.workflowStageId;
+
+  const {
+    workflow,
+    stages,
+    availableTransitions,
+    isLoading,
+    error,
+    refresh,
+    transition,
+  } = useWorkflow({
+    projectId,
+    apiHost,
+    entityId,
+    entityType,
+    releaseId,
+    workflowId,
+    workflowStageId,
+  });
+
+  const handleTransition = useCallback(async (targetStageId: string) => {
+    const success = await transition(targetStageId);
+    if (success) {
+      await refresh();
     }
-    
-    return DEMO_WORKFLOW;
-  }, [metadata, workflowId, workflowStage]);
+  }, [transition, refresh]);
 
-  // Build stages array with current state
-  const stages: WorkflowStage[] = useMemo(() => {
-    if (!workflowDef) return [];
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
 
-    const currentIndex = workflowDef.stages.findIndex(
-      (s) => s.id === currentStageId
+  if (!workflowId) {
+    return (
+      <div style={styles.emptyState}>
+        <div style={styles.emptyIcon}>
+          <WorkflowIcon />
+        </div>
+        <h3 style={styles.emptyTitle}>No Workflow Assigned</h3>
+        <p style={styles.emptyText}>
+          This {entityType || 'content'} does not have a workflow assigned.
+          Assign a workflow to the content type or component definition to enable workflow stages.
+        </p>
+      </div>
     );
-
-    return workflowDef.stages.map((stage, index) => {
-      let state: 'completed' | 'current' | 'pending';
-      if (currentIndex === -1) {
-        state = index === 0 ? 'current' : 'pending';
-      } else if (index < currentIndex) {
-        state = 'completed';
-      } else if (index === currentIndex) {
-        state = 'current';
-      } else {
-        state = 'pending';
-      }
-
-      return {
-        id: stage.id,
-        name: stage.name,
-        state,
-      };
-    });
-  }, [workflowDef, currentStageId]);
-
-  const handlePrevious = useCallback(async () => {
-    if (!workflowDef || !stages.length) return;
-    
-    const currentIndex = stages.findIndex((s) => s.state === 'current');
-    if (currentIndex <= 0) return;
-
-    const previousStage = workflowDef.stages[currentIndex - 1];
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // TODO: Call Uniform API to transition workflow stage
-      console.log('Transitioning to previous stage:', previousStage.name);
-      
-      // For demo mode, update local state
-      if (!workflowId) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        setDemoStageId(previousStage.id);
-      }
-      
-    } catch (err) {
-      setError('Failed to transition workflow');
-      console.error('Workflow transition error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [workflowDef, stages, workflowId]);
-
-  const handleNext = useCallback(async () => {
-    if (!workflowDef || !stages.length) return;
-    
-    const currentIndex = stages.findIndex((s) => s.state === 'current');
-    if (currentIndex >= stages.length - 1 || currentIndex < 0) return;
-
-    const nextStage = workflowDef.stages[currentIndex + 1];
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // TODO: Call Uniform API to transition workflow stage
-      console.log('Transitioning to next stage:', nextStage.name);
-      
-      // For demo mode, update local state
-      if (!workflowId) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        setDemoStageId(nextStage.id);
-      }
-      
-    } catch (err) {
-      setError('Failed to transition workflow');
-      console.error('Workflow transition error:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [workflowDef, stages, workflowId]);
+  }
 
   return (
     <div style={styles.wrapper}>
       <WorkflowTimeline
-        workflowName={workflowDef.name}
+        workflowName={workflow?.name || 'Workflow'}
         stages={stages}
-        onPrevious={handlePrevious}
-        onNext={handleNext}
+        availableTransitions={availableTransitions}
+        onTransition={handleTransition}
+        onRefresh={handleRefresh}
         isLoading={isLoading}
+        error={error}
       />
-      {error && <div style={styles.error}>{error}</div>}
     </div>
   );
 }
 
-// Loading component for MeshApp
-function LoadingState() {
+function WorkflowIcon() {
   return (
-    <div style={styles.loading}>
-      <span>Loading workflow...</span>
-    </div>
+    <svg
+      width="48"
+      height="48"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#9CA3AF"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="5" r="3" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <circle cx="6" cy="19" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="12" y1="12" x2="6" y2="16" />
+      <line x1="12" y1="12" x2="18" y2="16" />
+    </svg>
   );
 }
-
-// Error component for MeshApp
-function ErrorState({ error }: { error: Error }) {
-  return (
-    <div style={styles.errorState}>
-      <span>Error loading: {error.message}</span>
-    </div>
-  );
-}
-
-// Wrap with MeshApp which provides the required context
-function EditorToolWithMeshApp() {
-  return (
-    <MeshApp loadingComponent={LoadingState} errorComponent={ErrorState}>
-      <EditorToolContent />
-    </MeshApp>
-  );
-}
-
-// Dynamic import with SSR disabled - required because MeshApp
-// depends on browser APIs and iframe messaging with Uniform
-const EditorTool = dynamic(() => Promise.resolve(EditorToolWithMeshApp), {
-  ssr: false,
-  loading: () => <LoadingState />,
-});
 
 export default function EditorToolPage() {
-  return <EditorTool />;
+  return <EditorToolContent />;
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -203,34 +118,33 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100vh',
     width: '100%',
     overflow: 'hidden',
+    position: 'relative',
   },
-  loading: {
+  emptyState: {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     height: '100vh',
+    padding: '32px',
+    textAlign: 'center',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  },
+  emptyIcon: {
+    marginBottom: '16px',
+    opacity: 0.6,
+  },
+  emptyTitle: {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: '#374151',
+    margin: '0 0 8px 0',
+  },
+  emptyText: {
+    fontSize: '14px',
     color: '#6B7280',
-    fontSize: '14px',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
-  error: {
-    position: 'absolute',
-    bottom: '80px',
-    left: '16px',
-    right: '16px',
-    padding: '12px',
-    backgroundColor: '#FEE2E2',
-    color: '#DC2626',
-    borderRadius: '8px',
-    fontSize: '13px',
-  },
-  errorState: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-    color: '#DC2626',
-    fontSize: '14px',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    margin: 0,
+    maxWidth: '280px',
+    lineHeight: 1.5,
   },
 };
